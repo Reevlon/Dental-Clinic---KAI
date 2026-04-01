@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "Booking": {
+      "title": "Booking",
+      "description": "An appointment request from a patient.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of the patient"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number of the patient"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the patient"
+        },
+        "date": {
+          "type": "string",
+          "description": "Preferred date for the appointment (YYYY-MM-DD)"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for the visit"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "cancelled"],
+          "description": "Status of the booking"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "When the booking request was created"
+        }
+      },
+      "required": ["name", "phone", "email", "date", "reason", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/bookings/{bookingId}": {
+      "schema": {
+        "$ref": "#/entities/Booking"
+      },
+      "description": "Collection of all appointment bookings."
+    }
+  }
+}

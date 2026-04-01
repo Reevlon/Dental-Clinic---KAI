@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+
+  --color-primary: #9D174D; /* Deep Rose - Elegant, professional, warm */
+  --color-primary-light: #BE185D;
+  --color-secondary: #FCE7F3; /* Soft Pink - Warmth, welcoming, reduces anxiety */
+  --color-accent: #E11D48; /* Vibrant Rose - Premium, action-oriented */
+  --color-accent-hover: #BE123C;
+  --color-background: #FFF1F2; /* Very light pink/off-white - Clean but warm */
+  --color-text-main: #4C0519; /* Very dark rose - High readability, softer than pure black */
+  --color-text-muted: #831843; /* Muted dark rose */
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-main);
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+}
+
+/* Smooth scrolling for anchor links */
+html {
+  scroll-behavior: smooth;
+}
