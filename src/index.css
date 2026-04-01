@@ -5,20 +5,25 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
 
-  --color-primary: #9D174D; /* Deep Rose - Elegant, professional, warm */
-  --color-primary-light: #BE185D;
-  --color-secondary: #FCE7F3; /* Soft Pink - Warmth, welcoming, reduces anxiety */
-  --color-accent: #E11D48; /* Vibrant Rose - Premium, action-oriented */
-  --color-accent-hover: #BE123C;
-  --color-background: #FFF1F2; /* Very light pink/off-white - Clean but warm */
-  --color-text-main: #4C0519; /* Very dark rose - High readability, softer than pure black */
-  --color-text-muted: #831843; /* Muted dark rose */
+  --color-primary: #831843; /* Deep Maroon/Rose - More sophisticated */
+  --color-primary-light: #9D174D;
+  --color-secondary: #FFF1F2; /* Very Soft Pink - Warm & welcoming */
+  --color-accent: #BE123C; /* Elegant Rose Red */
+  --color-accent-hover: #9F1239;
+  --color-background: #FDFCFB; /* Warm Off-White - Luxury feel */
+  --color-text-main: #1A1A1A; /* Near Black - High contrast, professional */
+  --color-text-muted: #4C0519; /* Deep Muted Rose */
+  
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-3xl: 48px;
 }
 
 body {
   background-color: var(--color-background);
   color: var(--color-text-main);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4, h5, h6 {
