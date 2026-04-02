@@ -113,7 +113,7 @@ export default function App() {
     {
       title: "Smile Makeover",
       desc: "Full porcelain veneers for a natural, radiant look.",
-      image: "https://images.unsplash.com/photo-1594539829975-015de12217f1?q=80&w=800&auto=format&fit=crop"
+      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=800&auto=format&fit=crop"
     },
     {
       title: "Invisalign Results",
@@ -132,7 +132,7 @@ export default function App() {
       name: "Dr. Elena Rose",
       role: "Lead Cosmetic Dentist",
       bio: "15+ years experience in aesthetic restorations and smile design.",
-      image: "https://images.unsplash.com/photo-1559839734-2b71f1e3c7e3?q=80&w=400&auto=format&fit=crop"
+      image: "https://images.unsplash.com/photo-1598256989800-fea5ce5146f2?q=80&w=400&auto=format&fit=crop"
     },
     {
       name: "Dr. Marcus Thorne",
@@ -276,7 +276,7 @@ export default function App() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center bg-background overflow-hidden pt-12">
+      <section className="relative min-h-[90vh] flex items-center bg-background overflow-hidden pt-12 pb-20 sm:pb-32">
         {/* Luxury Background Elements */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute -top-24 -right-24 w-[600px] h-[600px] bg-secondary rounded-full opacity-30 blur-3xl"></div>
@@ -341,11 +341,11 @@ export default function App() {
                 </div>
                 
                 {/* Floating Badge */}
-                <div className="absolute -bottom-10 -left-10 bg-white p-8 rounded-3xl shadow-2xl border border-secondary max-w-[200px]">
-                  <div className="flex text-accent mb-2">
-                    {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-current" />)}
+                <div className="absolute -bottom-4 left-2 sm:-bottom-10 sm:-left-10 bg-white p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-100 max-w-[180px] sm:max-w-[200px] z-20">
+                  <div className="flex text-accent mb-2 sm:mb-3">
+                    {[1,2,3,4,5].map(i => <Star key={i} className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />)}
                   </div>
-                  <p className="text-xs font-black uppercase tracking-widest text-primary leading-tight">
+                  <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-primary leading-tight">
                     Beverly Hills' Top Rated Clinic 2026
                   </p>
                 </div>
