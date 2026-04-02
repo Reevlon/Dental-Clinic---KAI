@@ -1,34 +1,16 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
-import fs from "fs";
-import nodemailer from "nodemailer";
+import { fileURLToPath } from "url";
+import { Resend } from "resend";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Load Firebase config
-const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
-let db: any = null;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-if (fs.existsSync(firebaseConfigPath)) {
-  const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf-8"));
-  const firebaseApp = initializeApp(firebaseConfig);
-  db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
-}
-
-// Nodemailer Transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: process.env.SMTP_PORT === "465",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function startServer() {
   const app = express();
@@ -36,121 +18,105 @@ async function startServer() {
 
   app.use(express.json());
 
-  // API routes FIRST
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
-
-  app.post("/api/book", async (req, res) => {
+  // API Route for Booking
+  app.post("/api/book-appointment", async (req, res) => {
     const { name, phone, email, date, reason } = req.body;
-    
-    // Basic server-side validation
-    if (!name || !phone || !email || !date || !reason) {
-      return res.status(400).json({ success: false, message: "All fields are required." });
+
+    if (!name || !phone || !email || !date) {
+      return res.status(400).json({ success: false, message: "Please fill in all required fields." });
     }
 
-    if (!db) {
-      return res.status(500).json({ success: false, message: "Database not configured." });
+    if (!process.env.RESEND_API_KEY) {
+      console.error("Missing RESEND_API_KEY");
+      return res.status(500).json({ 
+        success: false, 
+        message: "Email service not configured. Please set RESEND_API_KEY in settings." 
+      });
     }
 
     try {
-      const bookingData = {
-        name,
-        phone,
-        email,
-        date,
-        reason,
-        status: "pending",
-        createdAt: serverTimestamp()
-      };
+      const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+      const toEmail = process.env.NOTIFICATION_EMAIL || "AgustinReevlon@gmail.com";
+      
+      // Send email to the clinic
+      const { data, error } = await resend.emails.send({
+        from: fromEmail === "onboarding@resend.dev" ? "onboarding@resend.dev" : `Premium Dental <${fromEmail}>`,
+        to: [toEmail],
+        subject: `New Appointment Request: ${name}`,
+        html: `
+          <h1>New Appointment Request</h1>
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Phone:</strong> ${phone}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Preferred Date:</strong> ${date}</p>
+          <p><strong>Reason for Visit:</strong> ${reason || "Not specified"}</p>
+        `,
+      });
 
-      const docRef = await addDoc(collection(db, "bookings"), bookingData);
-      console.log("New booking saved to Firestore with ID:", docRef.id);
-
-      // Send Email Confirmation
-      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-        try {
-          // Patient Confirmation
-          await transporter.sendMail({
-            from: process.env.FROM_EMAIL || '"Premium Dental" <no-reply@premiumdental.com>',
-            to: email,
-            subject: "Your Appointment Request at Premium Dental",
-            html: `
-              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #db2777;">Appointment Request Received</h2>
-                <p>Hello <strong>${name}</strong>,</p>
-                <p>Thank you for choosing Premium Dental. We have received your appointment request for <strong>${date}</strong>.</p>
-                <p><strong>Details:</strong></p>
-                <ul>
-                  <li><strong>Reason:</strong> ${reason}</li>
-                  <li><strong>Phone:</strong> ${phone}</li>
-                </ul>
-                <p>Our scheduling coordinator will contact you shortly to confirm your exact time.</p>
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="font-size: 12px; color: #666;">123 Smile Avenue, Beverly Hills, CA 90210 | (555) 019-8372</p>
-              </div>
-            `,
-          });
-
-          // Clinic Notification
-          if (process.env.CLINIC_EMAIL) {
-            await transporter.sendMail({
-              from: '"Booking System" <no-reply@premiumdental.com>',
-              to: process.env.CLINIC_EMAIL,
-              subject: `New Booking Request: ${name}`,
-              html: `
-                <div style="font-family: sans-serif; padding: 20px;">
-                  <h2>New Appointment Request</h2>
-                  <p><strong>Patient:</strong> ${name}</p>
-                  <p><strong>Email:</strong> ${email}</p>
-                  <p><strong>Phone:</strong> ${phone}</p>
-                  <p><strong>Date:</strong> ${date}</p>
-                  <p><strong>Reason:</strong> ${reason}</p>
-                  <p><strong>Booking ID:</strong> ${docRef.id}</p>
-                </div>
-              `,
-            });
-          }
-          console.log("Confirmation emails sent successfully.");
-        } catch (emailError) {
-          console.error("Error sending confirmation email:", emailError);
-          // We don't fail the whole request if email fails, but we log it
+      if (error) {
+        console.error("Resend Error:", error);
+        if (error.name === 'validation_error') {
+           return res.status(400).json({ 
+             success: false, 
+             message: "Email validation failed. If using Resend's free tier, you can ONLY send emails to your registered email address. Please check your NOTIFICATION_EMAIL setting." 
+           });
         }
-      } else {
-        console.warn("SMTP not configured. Skipping email confirmation.");
+        return res.status(500).json({ success: false, message: "Failed to send email. Check your Resend API key and domain." });
       }
 
-      // Send success response
-      res.json({ 
-        success: true, 
-        message: "Booking confirmed! We will contact you shortly.",
-        bookingId: docRef.id
-      });
-    } catch (error) {
-      console.error("Error saving booking to Firestore:", error);
-      res.status(500).json({ success: false, message: "Failed to save booking. Please try again later." });
+      res.json({ success: true, message: "Appointment request sent successfully!", data });
+    } catch (err) {
+      console.error("Server Error:", err);
+      res.status(500).json({ success: false, message: "Internal server error. Please try again later." });
     }
   });
 
+  // API Route for Newsletter
   app.post("/api/newsletter", async (req, res) => {
     const { email } = req.body;
+
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required." });
     }
 
-    if (!db) {
-      return res.status(500).json({ success: false, message: "Database not configured." });
+    if (!process.env.RESEND_API_KEY) {
+      return res.status(500).json({ 
+        success: false, 
+        message: "Email service not configured. Please set RESEND_API_KEY in settings." 
+      });
     }
 
     try {
-      await addDoc(collection(db, "newsletter"), {
-        email,
-        createdAt: serverTimestamp()
+      const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+      const toEmail = process.env.NOTIFICATION_EMAIL || "AgustinReevlon@gmail.com";
+      
+      // Send notification to the clinic (Free tier cannot send to arbitrary user emails)
+      const { data, error } = await resend.emails.send({
+        from: fromEmail === "onboarding@resend.dev" ? "onboarding@resend.dev" : `Premium Dental <${fromEmail}>`,
+        to: [toEmail],
+        subject: "New Newsletter Subscriber!",
+        html: `
+          <h1>New Subscriber</h1>
+          <p>A new user has joined the smile community newsletter.</p>
+          <p><strong>Email:</strong> ${email}</p>
+        `,
       });
-      res.json({ success: true, message: "Thank you for subscribing!" });
-    } catch (error) {
-      console.error("Error saving newsletter signup:", error);
-      res.status(500).json({ success: false, message: "Failed to subscribe. Please try again later." });
+
+      if (error) {
+        console.error("Resend Error:", error);
+        if (error.name === 'validation_error') {
+           return res.status(400).json({ 
+             success: false, 
+             message: "Email validation failed. Make sure your Resend account email matches the NOTIFICATION_EMAIL." 
+           });
+        }
+        return res.status(500).json({ success: false, message: "Failed to process subscription." });
+      }
+
+      res.json({ success: true, message: "Subscribed successfully!", data });
+    } catch (err) {
+      console.error("Server Error:", err);
+      res.status(500).json({ success: false, message: "Internal server error." });
     }
   });
 
@@ -162,10 +128,10 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 

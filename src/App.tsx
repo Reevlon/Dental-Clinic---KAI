@@ -157,7 +157,7 @@ export default function App() {
     setFormStatus({ type: 'loading', message: 'Submitting your request...' });
 
     try {
-      const response = await fetch('/api/book', {
+      const response = await fetch('/api/book-appointment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
