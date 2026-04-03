@@ -62,6 +62,16 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    match /newsletter_subscribers/{subscriberId} {
+      // Anyone can subscribe
+      allow create: if hasOnlyAllowedFields(['email', 'subscribedAt']) && 
+                      isValidEmail(request.resource.data.email) && 
+                      request.resource.data.subscribedAt is timestamp;
+      
+      // Only admins can see the list
+      allow read, update, delete: if isAdmin();
+    }
+
     match /users/{userId} {
       allow read: if isAuthenticated() && request.auth.uid == userId;
       allow write: if false; // Only manageable via admin console or specific functions
