@@ -31,10 +31,59 @@ import {
   Globe
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { db } from './firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import axios from 'axios';
 
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [bookingForm, setBookingForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    date: '',
+    reason: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  const handleBookingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitStatus('idle');
+
+    try {
+      // 1. Save to Firestore
+      await addDoc(collection(db, 'bookings'), {
+        ...bookingForm,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+
+      // 2. Notify via Facebook (Backend API)
+      try {
+        const response = await axios.post('/api/notify-booking', bookingForm);
+        if (response.data.detectedPsid) {
+          console.log('%c[Facebook Notification] Auto-detected your correct PSID: ' + response.data.detectedPsid, 'color: #0084ff; font-weight: bold;');
+          console.log('%cPlease update your FB_RECIPIENT_ID in Settings to this value to avoid fallback delays.', 'color: #0084ff;');
+        }
+      } catch (fbError) {
+        console.warn('Facebook notification failed, but booking was saved:', fbError);
+      }
+
+      setSubmitStatus('success');
+      setBookingForm({ name: '', phone: '', email: '', date: '', reason: '' });
+      
+      // Reset success message after 5 seconds
+      setTimeout(() => setSubmitStatus('idle'), 5000);
+    } catch (error) {
+      console.error('Booking error:', error);
+      setSubmitStatus('error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const faqs = [
     {
@@ -106,8 +155,8 @@ export default function App() {
               <a href="#services" className="text-sm uppercase tracking-widest font-bold text-text-main hover:text-accent transition-all">Services</a>
               <a href="#why-us" className="text-sm uppercase tracking-widest font-bold text-text-main hover:text-accent transition-all">Why Us</a>
               <a href="#testimonials" className="text-sm uppercase tracking-widest font-bold text-text-main hover:text-accent transition-all">Stories</a>
-              <a href="tel:5550198372" className="bg-primary hover:bg-primary-light text-white px-8 py-3 rounded-full text-xs uppercase tracking-widest font-black transition-all shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5">
-                Call Now
+              <a href="#book-now" className="bg-primary hover:bg-primary-light text-white px-8 py-3 rounded-full text-xs uppercase tracking-widest font-black transition-all shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5">
+                Book Now
               </a>
             </div>
 
@@ -131,7 +180,8 @@ export default function App() {
               <a href="#services" onClick={() => setIsMenuOpen(false)} className="block text-lg font-semibold text-text-main hover:text-primary border-b border-gray-50 pb-2">Services</a>
               <a href="#why-us" onClick={() => setIsMenuOpen(false)} className="block text-lg font-semibold text-text-main hover:text-primary border-b border-gray-50 pb-2">Why Us</a>
               <a href="#testimonials" onClick={() => setIsMenuOpen(false)} className="block text-lg font-semibold text-text-main hover:text-primary border-b border-gray-50 pb-2">Patient Stories</a>
-              <a href="tel:5550198372" onClick={() => setIsMenuOpen(false)} className="block text-xl font-bold text-accent pt-2">Call Us</a>
+              <a href="#book-now" onClick={() => setIsMenuOpen(false)} className="block text-xl font-bold text-accent pt-2">Book Appointment</a>
+              <a href="tel:09165184025" onClick={() => setIsMenuOpen(false)} className="block text-lg font-bold text-primary pt-2">Call Us</a>
               
               <div className="pt-6 flex space-x-6 justify-center border-t border-gray-100">
                 <Facebook className="w-6 h-6 text-primary" />
@@ -155,13 +205,13 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
           {/* Floating Phone Number - Upper Right Corner */}
           <div className="absolute top-0 right-6 lg:right-8 hidden md:block">
-            <a href="tel:5550198372" className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-secondary hover:border-accent transition-all group">
+            <a href="tel:09165184025" className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-secondary hover:border-accent transition-all group">
               <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white shadow-lg shadow-accent/20 group-hover:scale-110 transition-transform">
                 <Phone className="w-5 h-5" />
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-widest font-black text-text-muted leading-none mb-1">Direct Line</p>
-                <p className="text-sm font-black text-primary tracking-tight">(555) 019-8372</p>
+                <p className="text-sm font-black text-primary tracking-tight">09165184025</p>
               </div>
             </a>
           </div>
@@ -183,8 +233,14 @@ export default function App() {
                   Where advanced clinical precision meets artistic vision. We don't just treat teeth; we curate confidence in a sanctuary of modern luxury.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center gap-6">
-                  <a href="tel:5550198372" className="w-full sm:w-auto bg-primary hover:bg-primary-light text-white text-center px-10 py-5 rounded-full text-sm uppercase tracking-widest font-black transition-all shadow-2xl shadow-primary/20 hover:-translate-y-1">
-                    Call to Schedule
+                  <a href="#book-now" className="w-full sm:w-auto bg-primary hover:bg-primary-light text-white text-center px-10 py-5 rounded-full text-sm uppercase tracking-widest font-black transition-all shadow-2xl shadow-primary/20 hover:-translate-y-1">
+                    Book Appointment
+                  </a>
+                  <a href="tel:09165184025" className="flex items-center gap-4 group">
+                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <span className="text-sm uppercase tracking-widest font-black text-primary">Call Us</span>
                   </a>
                 </div>
               </motion.div>
@@ -570,6 +626,146 @@ export default function App() {
         </div>
       </section>
 
+
+      {/* Booking Form Section */}
+      <section id="book-now" className="py-24 bg-secondary/10 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <span className="text-accent font-bold tracking-widest uppercase text-sm mb-4 block">Online Booking</span>
+              <h2 className="text-3xl md:text-5xl font-serif font-bold text-primary mb-6">Schedule Your Visit Today</h2>
+              <p className="text-lg text-text-muted mb-8">Take the first step towards your perfect smile. Fill out the form and our team will contact you shortly to confirm your appointment.</p>
+              
+              <div className="space-y-6">
+                <div className="flex items-center">
+                  <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center mr-4 shadow-sm">
+                    <CheckCircle2 className="w-6 h-6 text-accent" />
+                  </div>
+                  <span className="font-bold text-primary">Fast & Easy Scheduling</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center mr-4 shadow-sm">
+                    <CheckCircle2 className="w-6 h-6 text-accent" />
+                  </div>
+                  <span className="font-bold text-primary">Personalized Consultations</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center mr-4 shadow-sm">
+                    <CheckCircle2 className="w-6 h-6 text-accent" />
+                  </div>
+                  <span className="font-bold text-primary">Expert Dental Team</span>
+                </div>
+              </div>
+            </div>
+
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="bg-white p-8 md:p-12 rounded-[2rem] shadow-2xl border border-pink-100"
+            >
+              <form onSubmit={handleBookingSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold text-primary mb-2 uppercase tracking-wider">Full Name</label>
+                    <input 
+                      required
+                      type="text" 
+                      placeholder="Juan Dela Cruz"
+                      className="w-full px-6 py-4 rounded-xl bg-background border-none focus:ring-2 focus:ring-accent transition-all font-medium"
+                      value={bookingForm.name}
+                      onChange={(e) => setBookingForm({...bookingForm, name: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-primary mb-2 uppercase tracking-wider">Phone Number</label>
+                    <input 
+                      required
+                      type="tel" 
+                      placeholder="0912 345 6789"
+                      className="w-full px-6 py-4 rounded-xl bg-background border-none focus:ring-2 focus:ring-accent transition-all font-medium"
+                      value={bookingForm.phone}
+                      onChange={(e) => setBookingForm({...bookingForm, phone: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-primary mb-2 uppercase tracking-wider">Email Address</label>
+                  <input 
+                    required
+                    type="email" 
+                    placeholder="juan@example.com"
+                    className="w-full px-6 py-4 rounded-xl bg-background border-none focus:ring-2 focus:ring-accent transition-all font-medium"
+                    value={bookingForm.email}
+                    onChange={(e) => setBookingForm({...bookingForm, email: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold text-primary mb-2 uppercase tracking-wider">Preferred Date</label>
+                    <input 
+                      required
+                      type="date" 
+                      className="w-full px-6 py-4 rounded-xl bg-background border-none focus:ring-2 focus:ring-accent transition-all font-medium"
+                      value={bookingForm.date}
+                      onChange={(e) => setBookingForm({...bookingForm, date: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-primary mb-2 uppercase tracking-wider">Reason for Visit</label>
+                    <select 
+                      required
+                      className="w-full px-6 py-4 rounded-xl bg-background border-none focus:ring-2 focus:ring-accent transition-all font-medium appearance-none"
+                      value={bookingForm.reason}
+                      onChange={(e) => setBookingForm({...bookingForm, reason: e.target.value})}
+                    >
+                      <option value="">Select a service</option>
+                      <option value="Consultation">Dental Consultation</option>
+                      <option value="Cleaning">Oral Prophylaxis (Cleaning)</option>
+                      <option value="Filling">Tooth Filling</option>
+                      <option value="Braces">Orthodontic Treatment (Braces)</option>
+                      <option value="Whitening">Teeth Whitening</option>
+                      <option value="Other">Other Services</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button 
+                  disabled={isSubmitting}
+                  type="submit" 
+                  className="w-full py-5 bg-primary text-white rounded-xl font-bold uppercase tracking-[0.2em] hover:bg-accent transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center"><Sparkles className="w-5 h-5 mr-2 animate-pulse" /> Processing...</span>
+                  ) : 'Confirm Booking'}
+                </button>
+
+                {submitStatus === 'success' && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 bg-green-50 text-green-700 rounded-xl text-center font-bold text-sm"
+                  >
+                    Booking request sent successfully! We'll contact you soon.
+                  </motion.div>
+                )}
+
+                {submitStatus === 'error' && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 bg-red-50 text-red-700 rounded-xl text-center font-bold text-sm"
+                  >
+                    Something went wrong. Please try again or call us directly.
+                  </motion.div>
+                )}
+              </form>
+            </motion.div>
+          </div>
+        </div>
+      </section>
 
       {/* FAQ Section */}
       <section className="py-24 bg-white">
