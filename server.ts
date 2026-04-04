@@ -91,9 +91,11 @@ Reason: ${reason}`;
       } catch (error: any) {
         const fbError = error.response?.data?.error || { message: error.message };
         
-        // Fallback: If the provided ID fails, try to auto-detect the latest PSID
-        if (fbError?.error_subcode === 2018001 && recipientId.trim() !== "AUTO") {
-          console.warn(`Provided FB_RECIPIENT_ID (${recipientId}) failed with 'No matching user found'. This ID is likely NOT a Page-Scoped ID (PSID). Attempting auto-detection fallback...`);
+        // Fallback: If the provided ID fails (code 100 or subcode 2018001), try to auto-detect the latest PSID
+        const isInvalidIdError = fbError?.code === 100 || fbError?.error_subcode === 2018001;
+        
+        if (isInvalidIdError && recipientId.trim() !== "AUTO") {
+          console.warn(`Provided FB_RECIPIENT_ID (${recipientId}) failed with '${fbError.message}'. This ID is likely NOT a Page-Scoped ID (PSID). Attempting auto-detection fallback...`);
           try {
             const convosResponse = await axios.get(
               `https://graph.facebook.com/v19.0/me/conversations?fields=participants,updated_time&access_token=${accessToken}`
