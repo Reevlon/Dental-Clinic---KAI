@@ -181,7 +181,6 @@ export default function App() {
               <a href="#why-us" onClick={() => setIsMenuOpen(false)} className="block text-lg font-semibold text-text-main hover:text-primary border-b border-gray-50 pb-2">Why Us</a>
               <a href="#testimonials" onClick={() => setIsMenuOpen(false)} className="block text-lg font-semibold text-text-main hover:text-primary border-b border-gray-50 pb-2">Patient Stories</a>
               <a href="#book-now" onClick={() => setIsMenuOpen(false)} className="block text-xl font-bold text-accent pt-2">Book Appointment</a>
-              <a href="tel:09165184025" onClick={() => setIsMenuOpen(false)} className="block text-lg font-bold text-primary pt-2">Call Us</a>
               
               <div className="pt-6 flex space-x-6 justify-center border-t border-gray-100">
                 <Facebook className="w-6 h-6 text-primary" />
@@ -235,12 +234,6 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row items-center gap-6">
                   <a href="#book-now" className="w-full sm:w-auto bg-primary hover:bg-primary-light text-white text-center px-10 py-5 rounded-full text-sm uppercase tracking-widest font-black transition-all shadow-2xl shadow-primary/20 hover:-translate-y-1">
                     Book Appointment
-                  </a>
-                  <a href="tel:09165184025" className="flex items-center gap-4 group">
-                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                      <Phone className="w-5 h-5" />
-                    </div>
-                    <span className="text-sm uppercase tracking-widest font-black text-primary">Call Us</span>
                   </a>
                 </div>
               </motion.div>
