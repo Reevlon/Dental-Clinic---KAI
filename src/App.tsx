@@ -35,7 +35,29 @@ import { db } from './firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import axios from 'axios';
 
+import { 
+  BrowserRouter as Router, 
+  Routes, 
+  Route, 
+  Link 
+} from 'react-router-dom';
+import { PrivacyPolicy, TermsOfService, Accessibility } from './components/LegalPages';
+import { KaiLogo } from './components/Logo';
+
 export default function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<MainLayout />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/accessibility" element={<Accessibility />} />
+      </Routes>
+    </Router>
+  );
+}
+
+function MainLayout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [bookingForm, setBookingForm] = useState({
@@ -47,9 +69,32 @@ export default function App() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errors, setErrors] = useState<{ phone?: string; email?: string }>({});
+
+  const validateForm = () => {
+    const newErrors: { phone?: string; email?: string } = {};
+    
+    // Philippines Phone Validation: +63 followed by 10 digits
+    const phoneRegex = /^\+63\d{10}$/;
+    if (!phoneRegex.test(bookingForm.phone)) {
+      newErrors.phone = "Phone must be in format +63 followed by 10 digits (e.g., +639171234567)";
+    }
+
+    // Email Validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(bookingForm.email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) return;
+
     setIsSubmitting(true);
     setSubmitStatus('idle');
 
@@ -125,6 +170,8 @@ export default function App() {
     }
   ];
 
+  const today = new Date().toISOString().split('T')[0];
+
   return (
     <div className="min-h-screen font-sans text-text-main bg-background">
       {/* Top Bar */}
@@ -147,7 +194,10 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between h-24">
             <div className="flex items-center">
-              <span className="font-serif text-3xl font-black tracking-tighter text-primary">PREMIUM<span className="text-accent">DENTAL</span></span>
+              <Link to="/" className="flex items-center group">
+                <KaiLogo className="w-12 h-12 mr-3 text-accent group-hover:scale-110 transition-transform" />
+                <span className="font-serif text-3xl font-black tracking-tighter text-primary">K.A.I <span className="text-accent">DENTAL CLINIC</span></span>
+              </Link>
             </div>
             
             {/* Desktop Menu */}
@@ -263,7 +313,7 @@ export default function App() {
                     {[1,2,3,4,5].map(i => <Star key={i} className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />)}
                   </div>
                   <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-primary leading-tight">
-                    Beverly Hills' Top Rated Clinic 2026
+                    Manila's Top Rated Clinic 2026
                   </p>
                 </div>
               </motion.div>
@@ -461,8 +511,8 @@ export default function App() {
               <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-accent rounded-full blur-3xl opacity-20 -z-0"></div>
             </div>
             <div className="lg:w-1/2">
-              <span className="text-secondary font-bold tracking-widest uppercase text-sm mb-4 block">The Premium Difference</span>
-              <h2 className="text-3xl md:text-5xl font-serif font-bold mb-8 leading-tight">Why Choose Premium Dental?</h2>
+              <span className="text-secondary font-bold tracking-widest uppercase text-sm mb-4 block">The K.A.I Difference</span>
+              <h2 className="text-3xl md:text-5xl font-serif font-bold mb-8 leading-tight">Why Choose K.A.I Dental Clinic?</h2>
               <p className="text-lg text-white mb-12 leading-relaxed font-medium">
                 We've completely reimagined the dental experience. No more clinical coldness or anxiety. We combine a luxury spa-like atmosphere with the world's most advanced dental technology.
               </p>
@@ -497,7 +547,7 @@ export default function App() {
                     <Award className="w-7 h-7 text-accent" />
                   </div>
                   <h4 className="text-xl font-bold font-serif mb-2">Top Rated</h4>
-                  <p className="text-white/90 text-sm font-medium">Voted #1 Dental Clinic in Beverly Hills for 3 consecutive years.</p>
+                  <p className="text-white/90 text-sm font-medium">Voted #1 Dental Clinic in Manila for 3 consecutive years.</p>
                 </div>
               </div>
             </div>
@@ -675,11 +725,15 @@ export default function App() {
                     <input 
                       required
                       type="tel" 
-                      placeholder="0912 345 6789"
-                      className="w-full px-6 py-4 rounded-xl bg-background border-none focus:ring-2 focus:ring-accent transition-all font-medium"
+                      placeholder="+639171234567"
+                      className={`w-full px-6 py-4 rounded-xl bg-background border-none focus:ring-2 transition-all font-medium ${errors.phone ? 'ring-2 ring-red-500' : 'focus:ring-accent'}`}
                       value={bookingForm.phone}
-                      onChange={(e) => setBookingForm({...bookingForm, phone: e.target.value})}
+                      onChange={(e) => {
+                        setBookingForm({...bookingForm, phone: e.target.value});
+                        if (errors.phone) setErrors({...errors, phone: undefined});
+                      }}
                     />
+                    {errors.phone && <p className="mt-2 text-xs font-bold text-red-500">{errors.phone}</p>}
                   </div>
                 </div>
 
@@ -689,10 +743,14 @@ export default function App() {
                     required
                     type="email" 
                     placeholder="juan@example.com"
-                    className="w-full px-6 py-4 rounded-xl bg-background border-none focus:ring-2 focus:ring-accent transition-all font-medium"
+                    className={`w-full px-6 py-4 rounded-xl bg-background border-none focus:ring-2 transition-all font-medium ${errors.email ? 'ring-2 ring-red-500' : 'focus:ring-accent'}`}
                     value={bookingForm.email}
-                    onChange={(e) => setBookingForm({...bookingForm, email: e.target.value})}
+                    onChange={(e) => {
+                      setBookingForm({...bookingForm, email: e.target.value});
+                      if (errors.email) setErrors({...errors, email: undefined});
+                    }}
                   />
+                  {errors.email && <p className="mt-2 text-xs font-bold text-red-500">{errors.email}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -701,6 +759,7 @@ export default function App() {
                     <input 
                       required
                       type="date" 
+                      min={today}
                       className="w-full px-6 py-4 rounded-xl bg-background border-none focus:ring-2 focus:ring-accent transition-all font-medium"
                       value={bookingForm.date}
                       onChange={(e) => setBookingForm({...bookingForm, date: e.target.value})}
@@ -798,8 +857,11 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-20 mb-24">
             <div className="col-span-1">
-              <span className="font-serif text-3xl font-black tracking-tighter text-primary block mb-8">PREMIUM<span className="text-accent">DENTAL</span></span>
-              <p className="text-text-muted mb-10 leading-relaxed font-medium">Redefining the dental experience through artistic vision, clinical excellence, and uncompromising luxury in the heart of Beverly Hills.</p>
+              <div className="flex items-center mb-8">
+                <KaiLogo className="w-10 h-10 mr-3 text-accent" />
+                <span className="font-serif text-3xl font-black tracking-tighter text-primary">K.A.I <span className="text-accent">DENTAL CLINIC</span></span>
+              </div>
+              <p className="text-text-muted mb-10 leading-relaxed font-medium">Redefining the dental experience through artistic vision, clinical excellence, and uncompromising luxury in the heart of Manila.</p>
               <div className="flex space-x-6">
                 <a href="#" className="w-12 h-12 rounded-full border border-secondary flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all shadow-sm group">
                   <Facebook className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -826,7 +888,7 @@ export default function App() {
             </div>
 
             <div>
-              <h4 className="text-xl font-serif font-bold text-primary mb-8">Sanctuary</h4>
+              <h4 className="text-xl font-serif font-bold text-primary mb-8">Location</h4>
               <ul className="space-y-8">
                 <li className="flex items-start group cursor-pointer">
                   <div className="w-10 h-10 rounded-xl bg-secondary/30 flex items-center justify-center mr-4 flex-shrink-0 group-hover:bg-accent transition-colors">
@@ -844,18 +906,18 @@ export default function App() {
                   <div className="w-10 h-10 rounded-xl bg-secondary/30 flex items-center justify-center mr-4 flex-shrink-0 group-hover:bg-accent transition-colors">
                     <Mail className="w-5 h-5 text-accent group-hover:text-white transition-colors" />
                   </div>
-                  <span className="text-sm font-bold text-text-muted">hello@premiumdental.com</span>
+                  <span className="text-sm font-bold text-text-muted">kaidentalph@gmail.com</span>
                 </li>
               </ul>
             </div>
           </div>
 
           <div className="pt-16 border-t border-secondary flex flex-col md:flex-row justify-between items-center gap-8">
-            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-text-muted/40">© 2026 PREMIUM DENTAL CLINIC. ARTISTRY IN EVERY SMILE.</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-text-muted/40">© 2026 K.A.I DENTAL CLINIC. ARTISTRY IN EVERY SMILE.</p>
             <div className="flex space-x-10 text-[10px] uppercase tracking-[0.2em] font-black text-text-muted/40">
-              <a href="#" className="hover:text-accent transition-colors">Privacy</a>
-              <a href="#" className="hover:text-accent transition-colors">Terms</a>
-              <a href="#" className="hover:text-accent transition-colors">Accessibility</a>
+              <Link to="/privacy" className="hover:text-accent transition-colors">Privacy</Link>
+              <Link to="/terms" className="hover:text-accent transition-colors">Terms</Link>
+              <Link to="/accessibility" className="hover:text-accent transition-colors">Accessibility</Link>
             </div>
           </div>
         </div>

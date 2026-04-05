@@ -150,7 +150,7 @@ Reason: ${reason}`;
     if (resend && notificationEmail) {
       try {
         await resend.emails.send({
-          from: "Premium Dental <onboarding@resend.dev>",
+          from: "K.A.I Dental Clinic <onboarding@resend.dev>",
           to: notificationEmail,
           subject: `New Booking: ${name}`,
           text: message,
