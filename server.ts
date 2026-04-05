@@ -58,6 +58,12 @@ Reason: ${reason}`;
           console.warn(`CONFIG WARNING: Your FB_RECIPIENT_ID is the same as your FB_PAGE_ID (${cleanId}). Switching to AUTO detection...`);
           cleanId = "AUTO";
         }
+
+        // Feature: Auto-detect if ID looks like a Global ID (starts with 1000 and is 15 digits or less)
+        if (cleanId.startsWith("1000") && cleanId.length <= 15) {
+          console.warn(`CONFIG WARNING: Your FB_RECIPIENT_ID (${cleanId}) looks like a Global ID. Switching to AUTO detection to find your PSID...`);
+          cleanId = "AUTO";
+        }
         
         // Feature: Auto-detect PSID if set to "AUTO"
         if (cleanId === "AUTO") {
@@ -131,7 +137,11 @@ Reason: ${reason}`;
         }
 
         if (!fbSuccess) {
-          console.error("Facebook Notification Final Failure:", fbError);
+          if (fbError?.error_subcode === 460) {
+            console.error("CRITICAL: Your Facebook Page Access Token has been invalidated (User changed password or session expired). YOU MUST generate a new token in Facebook Developers and update FB_PAGE_ACCESS_TOKEN in Settings.");
+          } else {
+            console.error("Facebook Notification Final Failure:", fbError);
+          }
         }
       }
     }
@@ -186,21 +196,43 @@ Reason: ${reason}`;
       if (configRecipientId === configPageId && configPageId) {
         issues.push(`ERROR: FB_RECIPIENT_ID and FB_PAGE_ID are identical. The system will treat this as 'AUTO' and try to find your PSID.`);
       }
+      if (configRecipientId && configRecipientId.startsWith("1000") && configRecipientId.length <= 15) {
+        issues.push(`WARNING: Your FB_RECIPIENT_ID (${configRecipientId}) looks like a Global Facebook ID. Facebook Messenger requires a Page-Scoped ID (PSID). Please set your FB_RECIPIENT_ID to 'AUTO' in Settings.`);
+      }
+
+      const conversations = convos.data.data || [];
+      let suggestedPsid = null;
+      if (conversations.length > 0 && conversations[0].participants?.data) {
+        const latestParticipant = conversations[0].participants.data.find((p: any) => p.id !== actualPageId);
+        if (latestParticipant) {
+          suggestedPsid = latestParticipant.id;
+        }
+      }
 
       res.json({
         status: issues.length > 0 ? "warning" : "success",
         issues: issues.length > 0 ? issues : "None detected",
+        suggestedPsid: suggestedPsid,
         configuredPageId: configPageId,
         actualPageId: actualPageId,
         configuredRecipientId: configRecipientId,
         pageName: pageInfo.data.name,
-        recentConversations: convos.data.data.map((c: any) => ({
+        recentConversations: conversations.map((c: any) => ({
           id: c.id,
           updated_time: c.updated_time,
           participants: c.participants.data
         }))
       });
     } catch (error: any) {
+      const fbError = error.response?.data?.error;
+      if (fbError?.error_subcode === 460) {
+        return res.status(401).json({ 
+          status: "error",
+          error: "TOKEN_INVALIDATED",
+          message: "Your Facebook Page Access Token has been invalidated (User changed password or session expired).",
+          instruction: "Please generate a new Page Access Token in the Facebook Developers portal and update FB_PAGE_ACCESS_TOKEN in your Settings."
+        });
+      }
       res.status(500).json({ error: error.response?.data || error.message });
     }
   });
